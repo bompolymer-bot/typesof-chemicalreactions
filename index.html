@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chemical Reactions Explorer</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1e293b;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --accent: #38bdf8;
+      --accent-2: #a78bfa;
+      --good: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --card: rgba(255, 255, 255, 0.08);
+      --border: rgba(255, 255, 255, 0.16);
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 35%),
+        radial-gradient(circle at top right, rgba(167, 139, 250, 0.22), transparent 35%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.22) 1px, transparent 1px),
+        radial-gradient(circle, rgba(56,189,248,0.18) 1.4px, transparent 1.4px);
+      background-size: 38px 38px, 72px 72px;
+      animation: floatingBackground 18s linear infinite;
+      opacity: 0.35;
+      z-index: -1;
+    }
+
+    header {
+      padding: 42px 20px 24px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 58px);
+      letter-spacing: -1px;
+      background: linear-gradient(90deg, #f8fafc, #7dd3fc, #c4b5fd, #f8fafc);
+      background-size: 220% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: titleShine 5s linear infinite;
+    }
+
+    header p {
+      max-width: 820px;
+      margin: 14px auto 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .container {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto 42px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 22px 0 28px;
+    }
+
+    button, select {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 14px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    button:hover, select:hover {
+      transform: translateY(-2px);
+      border-color: rgba(56, 189, 248, 0.7);
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    button.active {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #08111f;
+      border-color: transparent;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      animation: cardEnter 0.6s ease both;
+    }
+
+    .card-pad {
+      padding: 24px;
+    }
+
+    .reaction-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    h3 {
+      margin: 22px 0 8px;
+      color: #e0f2fe;
+    }
+
+    .tag {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.15);
+      color: #bbf7d0;
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .equation {
+      margin: 16px 0;
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border);
+      font-size: clamp(19px, 3vw, 28px);
+      text-align: center;
+      letter-spacing: 0.5px;
+      font-weight: bold;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .equation::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-120%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+      animation: equationSweep 3.5s infinite;
+    }
+
+    .explain {
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .key-points {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 620px) {
+      .key-points {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .mini {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    .mini strong {
+      color: #bae6fd;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .animation-stage {
+      height: 430px;
+      position: relative;
+      background:
+        linear-gradient(90deg, rgba(34, 197, 94, 0.12) 0 44%, rgba(255,255,255,0.08) 44% 56%, rgba(56, 189, 248, 0.12) 56% 100%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0.95)),
+        radial-gradient(circle at center, rgba(56, 189, 248, 0.13), transparent 45%);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .zone-title {
+      position: absolute;
+      top: 58px;
+      z-index: 2;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.74);
+      font-weight: bold;
+      letter-spacing: 0.4px;
+      font-size: 13px;
+    }
+
+    .reactants-title {
+      left: 18px;
+      color: #bbf7d0;
+    }
+
+    .products-title {
+      right: 18px;
+      color: #bae6fd;
+    }
+
+    .reaction-zone-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      border-left: 2px dashed rgba(255,255,255,0.24);
+      z-index: 1;
+    }
+
+    .stage-note {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 3;
+      color: #e0f2fe;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 12px;
+      font-size: 13px;
+      text-align: center;
+      max-width: 90%;
+    }
+
+    .stage-label {
+      position: absolute;
+      top: 16px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      z-index: 3;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent);
+    }
+
+    .molecule {
+      position: absolute;
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      line-height: 1.12;
+      font-weight: bold;
+      color: #06111f;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.35), inset 0 0 22px rgba(255,255,255,0.45), 0 0 20px rgba(255,255,255,0.18);
+      border: 3px solid rgba(255,255,255,0.6);
+      user-select: none;
+      animation-duration: var(--anim-speed, 6s);
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
+      z-index: 4;
+    }
+
+    .molecule::after {
+      content: "";
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.16);
+      animation: moleculeRing 2.2s infinite ease-in-out;
+    }
+
+    .a { background: #67e8f9; }
+    .b { background: #fcd34d; }
+    .c { background: #86efac; }
+    .d { background: #fda4af; }
+    .e { background: #c4b5fd; }
+    .f { background: #fdba74; }
+
+    .bond {
+      position: absolute;
+      height: 8px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 999px;
+      transform-origin: left center;
+      opacity: 0.9;
+      animation-duration: var(--anim-speed, 6s);
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
+    }
+
+    .arrow {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 52px;
+      color: var(--accent);
+      text-shadow: 0 0 22px rgba(56, 189, 248, 0.8);
+      animation: pulse 2s infinite ease-in-out;
+      z-index: 2;
+    }
+
+    .plus-sign {
+      position: absolute;
+      color: rgba(255,255,255,0.72);
+      font-size: 32px;
+      font-weight: bold;
+      z-index: 2;
+    }
+
+    .energy-label {
+      position: absolute;
+      left: 50%;
+      top: 70%;
+      transform: translateX(-50%);
+      color: #fed7aa;
+      font-weight: bold;
+      z-index: 4;
+      text-shadow: 0 0 16px rgba(251, 146, 60, 0.75);
+      animation: pulse 1.5s infinite ease-in-out;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(251, 146, 60, 0.45);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    .heat {
+      position: absolute;
+      left: 50%;
+      bottom: 72px;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 7px;
+      z-index: 3;
+    }
+
+    .flame {
+      width: 24px;
+      height: 46px;
+      border-radius: 60% 60% 45% 45%;
+      background: linear-gradient(#fde68a, #fb923c, #ef4444);
+      animation: flame 0.65s infinite alternate ease-in-out;
+      transform-origin: bottom center;
+    }
+
+    .flame:nth-child(2) { animation-delay: 0.15s; height: 58px; }
+    .flame:nth-child(3) { animation-delay: 0.3s; }
+
+    .bubble {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(186, 230, 253, 0.85);
+      animation: bubble 3s infinite ease-in;
+      opacity: 0;
+    }
+
+    .precipitate {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: #fef08a;
+      animation: fall 3.4s infinite ease-in;
+      opacity: 0;
+    }
+
+    .spark {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #fde68a;
+      box-shadow: 0 0 18px #fbbf24;
+      opacity: 0;
+      animation: sparkFly 1.8s infinite ease-out;
+      z-index: 5;
+    }
+
+    .starburst {
+      position: absolute;
+      left: 50%;
+      top: 45%;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.75);
+      box-shadow: 0 0 0 8px rgba(56,189,248,0.18), 0 0 36px rgba(56,189,248,0.9);
+      animation: starburst 2.2s infinite ease-out;
+      z-index: 3;
+    }
+
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 14px;
+      border-radius: 3px;
+      top: -20px;
+      z-index: 9999;
+      animation: confettiFall 1.5s ease-out forwards;
+      pointer-events: none;
+    }
+
+    .pop-correct {
+      animation: answerPop 0.55s ease both;
+      border-color: rgba(34, 197, 94, 0.8) !important;
+      background: rgba(34, 197, 94, 0.18) !important;
+    }
+
+    .shake-wrong {
+      animation: shakeWrong 0.42s ease both;
+      border-color: rgba(239, 68, 68, 0.75) !important;
+      background: rgba(239, 68, 68, 0.13) !important;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .compare-section {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .compare-section {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .compare-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border);
+    }
+
+    .compare-card h3 {
+      margin-top: 0;
+    }
+
+    .quiz {
+      margin-top: 20px;
+    }
+
+    .question {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .options {
+      display: grid;
+      gap: 9px;
+      margin-top: 12px;
+    }
+
+    .option {
+      text-align: left;
+      width: 100%;
+    }
+
+    .feedback {
+      margin-top: 10px;
+      font-weight: bold;
+      min-height: 24px;
+    }
+
+    .correct { color: #86efac; }
+    .wrong { color: #fecaca; }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 20px 44px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @keyframes floatingBackground {
+      from { transform: translateY(0); }
+      to { transform: translateY(-72px); }
+    }
+
+    @keyframes titleShine {
+      0% { background-position: 0% center; }
+      100% { background-position: 220% center; }
+    }
+
+    @keyframes equationSweep {
+      0%, 40% { transform: translateX(-120%); }
+      70%, 100% { transform: translateX(120%); }
+    }
+
+    @keyframes cardEnter {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes moleculeRing {
+      0%, 100% { transform: scale(0.9); opacity: 0.25; }
+      50% { transform: scale(1.12); opacity: 0.55; }
+    }
+
+    @keyframes sparkFly {
+      0% { opacity: 0; transform: translate(0, 0) scale(0.2); }
+      25% { opacity: 1; }
+      100% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(1.2); }
+    }
+
+    @keyframes starburst {
+      0%, 45%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+      58% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); }
+      70% { opacity: 0.25; transform: translate(-50%, -50%) scale(2.6); }
+    }
+
+    @keyframes confettiFall {
+      0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+      100% { opacity: 0; transform: translateY(95vh) rotate(540deg); }
+    }
+
+    @keyframes answerPop {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes shakeWrong {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      50% { transform: translateX(8px); }
+      75% { transform: translateX(-4px); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(0.95); }
+      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+    }
+
+    @keyframes flame {
+      from { transform: scaleY(0.86) rotate(-4deg); filter: blur(0px); }
+      to { transform: scaleY(1.12) rotate(4deg); filter: blur(0.4px); }
+    }
+
+    @keyframes bubble {
+      0% { transform: translateY(0) scale(0.5); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: translateY(-210px) scale(1.25); opacity: 0; }
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-160px) rotate(0deg); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: translateY(120px) rotate(220deg); opacity: 0; }
+    }
+
+    @keyframes reactantToCenterLeft {
+      0%, 22%, 100% { left: 12%; top: 42%; opacity: 1; transform: scale(1); }
+      48% { left: 34%; top: 42%; opacity: 1; transform: scale(1.08); }
+      62% { left: 44%; top: 42%; opacity: 0.15; transform: scale(1.25); }
+      72%, 92% { left: 44%; top: 42%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes reactantToCenterRight {
+      0%, 22%, 100% { left: 31%; top: 42%; opacity: 1; transform: scale(1); }
+      48% { left: 39%; top: 42%; opacity: 1; transform: scale(1.08); }
+      62% { left: 46%; top: 42%; opacity: 0.15; transform: scale(1.25); }
+      72%, 92% { left: 46%; top: 42%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes productAppearMain {
+      0%, 54%, 100% { left: 68%; top: 42%; opacity: 0; transform: scale(0.1); }
+      68% { opacity: 1; transform: scale(1.18); }
+      80%, 94% { left: 68%; top: 42%; opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes compoundBreakStart {
+      0%, 28%, 100% { left: 22%; top: 42%; opacity: 1; transform: scale(1); }
+      48% { left: 44%; top: 42%; opacity: 1; transform: scale(1.15); }
+      62% { left: 46%; top: 42%; opacity: 0.1; transform: scale(1.35); }
+      76%, 92% { left: 46%; top: 42%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes productAppearUpper {
+      0%, 54%, 100% { left: 66%; top: 29%; opacity: 0; transform: scale(0.1); }
+      68% { opacity: 1; transform: scale(1.18); }
+      80%, 94% { left: 66%; top: 29%; opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes productAppearLower {
+      0%, 54%, 100% { left: 66%; top: 57%; opacity: 0; transform: scale(0.1); }
+      68% { opacity: 1; transform: scale(1.18); }
+      80%, 94% { left: 66%; top: 57%; opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes singleFreeElement {
+      0%, 24%, 100% { left: 10%; top: 44%; opacity: 1; transform: scale(1); }
+      48% { left: 36%; top: 44%; opacity: 1; transform: scale(1.1); }
+      62% { left: 45%; top: 44%; opacity: 0.15; transform: scale(1.25); }
+      75%, 92% { left: 45%; top: 44%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes singleCompound {
+      0%, 24%, 100% { left: 30%; top: 44%; opacity: 1; transform: scale(1); }
+      48% { left: 40%; top: 44%; opacity: 1; transform: scale(1.1); }
+      62% { left: 46%; top: 44%; opacity: 0.15; transform: scale(1.25); }
+      75%, 92% { left: 46%; top: 44%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes productAppearUpperFar {
+      0%, 54%, 100% { left: 64%; top: 30%; opacity: 0; transform: scale(0.1); }
+      68% { opacity: 1; transform: scale(1.18); }
+      80%, 94% { left: 64%; top: 30%; opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes productAppearLowerFar {
+      0%, 54%, 100% { left: 76%; top: 54%; opacity: 0; transform: scale(0.1); }
+      68% { opacity: 1; transform: scale(1.18); }
+      80%, 94% { left: 76%; top: 54%; opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes doubleReactantOne {
+      0%, 24%, 100% { left: 11%; top: 35%; opacity: 1; transform: scale(1); }
+      48% { left: 36%; top: 40%; opacity: 1; transform: scale(1.1); }
+      62% { left: 45%; top: 44%; opacity: 0.15; transform: scale(1.25); }
+      75%, 92% { left: 45%; top: 44%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes doubleReactantTwo {
+      0%, 24%, 100% { left: 31%; top: 55%; opacity: 1; transform: scale(1); }
+      48% { left: 39%; top: 49%; opacity: 1; transform: scale(1.1); }
+      62% { left: 46%; top: 46%; opacity: 0.15; transform: scale(1.25); }
+      75%, 92% { left: 46%; top: 46%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes neutralAcid {
+      0%, 24%, 100% { left: 12%; top: 36%; opacity: 1; transform: scale(1); }
+      48% { left: 36%; top: 40%; opacity: 1; transform: scale(1.1); }
+      62% { left: 45%; top: 44%; opacity: 0.15; transform: scale(1.25); }
+      75%, 92% { left: 45%; top: 44%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes neutralBase {
+      0%, 24%, 100% { left: 31%; top: 54%; opacity: 1; transform: scale(1); }
+      48% { left: 39%; top: 49%; opacity: 1; transform: scale(1.1); }
+      62% { left: 46%; top: 46%; opacity: 0.15; transform: scale(1.25); }
+      75%, 92% { left: 46%; top: 46%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes electronMove {
+      0%, 24%, 100% { left: 25%; top: 27%; opacity: 1; transform: scale(0.9); }
+      55% { left: 46%; top: 27%; opacity: 1; transform: scale(1.15); }
+      76%, 92% { left: 67%; top: 27%; opacity: 0.7; transform: scale(0.9); }
+    }
+
+    @keyframes combustionReactantLeft {
+      0%, 25%, 100% { left: 12%; top: 39%; opacity: 1; transform: scale(1); }
+      45% { left: 32%; top: 39%; opacity: 1; transform: scale(1.08); }
+      58% { left: 43%; top: 39%; opacity: 0.2; transform: scale(1.35); }
+      70%, 92% { left: 43%; top: 39%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes combustionReactantRight {
+      0%, 25%, 100% { left: 31%; top: 50%; opacity: 1; transform: scale(1); }
+      45% { left: 39%; top: 50%; opacity: 1; transform: scale(1.08); }
+      58% { left: 45%; top: 50%; opacity: 0.2; transform: scale(1.35); }
+      70%, 92% { left: 45%; top: 50%; opacity: 0; transform: scale(0.1); }
+    }
+
+    @keyframes combustionProductCO2 {
+      0%, 52%, 100% { left: 66%; top: 29%; opacity: 0; transform: scale(0.1); }
+      66% { opacity: 1; transform: scale(1.18); }
+      80%, 94% { left: 66%; top: 29%; opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes combustionProductH2O {
+      0%, 52%, 100% { left: 66%; top: 57%; opacity: 0; transform: scale(0.1); }
+      66% { opacity: 1; transform: scale(1.18); }
+      80%, 94% { left: 66%; top: 57%; opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes reactionFlash {
+      0%, 44%, 100% { opacity: 0; transform: scale(0.2); }
+      55% { opacity: 1; transform: scale(1.4); }
+      66% { opacity: 0.25; transform: scale(0.75); }
+    }
+
+    @keyframes neutralA {
+      0%, 100% { left: 15%; top: 37%; }
+      46% { left: 38%; top: 42%; }
+      74% { left: 61%; top: 35%; }
+    }
+    @keyframes neutralB {
+      0%, 100% { right: 15%; top: 52%; }
+      46% { right: 38%; top: 46%; }
+      74% { right: 61%; top: 55%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .molecule, .bond, .arrow, .flame, .bubble, .precipitate, .spark, .starburst, h1, body::before, .equation::after {
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="badge">Interactive Chemistry Learning App</div>
+    <h1>Chemical Reactions Explorer</h1>
+    <p>Learn the major types of chemical reactions through animated particles, simple patterns, examples, observations, and a quick quiz.</p>
+  </header>
+
+  <main class="container">
+    <nav class="toolbar" id="reactionButtons" aria-label="Reaction type selector"></nav>
+
+    <section class="grid">
+      <article class="card">
+        <div class="animation-stage" id="stage" aria-label="Animated chemical reaction model">
+          <div class="stage-label">
+            <span id="stageCaption">Particle animation</span>
+            <div class="speed-control">
+              <label for="speed">Speed</label>
+              <input type="range" id="speed" min="3" max="10" value="6" />
+            </div>
+          </div>
+        </div>
+        <div class="controls-row">
+          <button id="replayBtn">Replay Animation</button>
+          <button id="particlesBtn">Show Particle Notes</button>
+        </div>
+      </article>
+
+      <article class="card card-pad">
+        <div class="reaction-title">
+          <h2 id="title">Reaction Type</h2>
+          <span class="tag" id="pattern">Pattern</span>
+        </div>
+        <div class="equation" id="equation">A + B → AB</div>
+        <p class="explain" id="description"></p>
+
+        <h3>Easy way to identify it</h3>
+        <p class="explain" id="identify"></p>
+
+        <div class="key-points">
+          <div class="mini">
+            <strong>Real example</strong>
+            <span id="example"></span>
+          </div>
+          <div class="mini">
+            <strong>Common sign</strong>
+            <span id="sign"></span>
+          </div>
+          <div class="mini">
+            <strong>Student tip</strong>
+            <span id="tip"></span>
+          </div>
+          <div class="mini">
+            <strong>Particle note</strong>
+            <span id="particleNote"></span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="compare-section">
+      <div class="compare-card">
+        <h3>Reactants</h3>
+        <p id="reactantsBox">Starting substances are shown on the left side of the equation.</p>
+      </div>
+      <div class="compare-card">
+        <h3>Products</h3>
+        <p id="productsBox">New substances are shown on the right side of the equation.</p>
+      </div>
+      <div class="compare-card">
+        <h3>Conservation of Mass</h3>
+        <p>Atoms are rearranged, not destroyed. A balanced equation has the same number of each atom on both sides.</p>
+      </div>
+    </section>
+
+    <section class="card card-pad quiz">
+      <h2>Quick Check Quiz</h2>
+      <p class="explain">Mixed challenge: answer first, then check. The correct answer will not appear until you choose an option.</p>
+      <div class="question">
+        <strong id="quizQuestion">Question appears here</strong>
+        <div class="options" id="quizOptions"></div>
+        <div class="feedback" id="quizFeedback"></div>
+        <button id="newQuestionBtn" style="margin-top:12px;">New Question</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Designed for classroom teaching, revision, and student self-study. Use the buttons to compare reaction patterns.
+  </footer>
+
+  <script>
+    const reactions = [
+      {
+        id: "synthesis",
+        title: "Synthesis / Combination Reaction",
+        pattern: "A + B → AB",
+        equation: "2Mg + O₂ → 2MgO",
+        description: "Two or more simple substances combine to form one main product. Think of it as small parts joining together to make a bigger compound.",
+        identify: "Look for two or more reactants forming one product. The product side is simpler because it usually has only one main compound.",
+        example: "Magnesium burns in oxygen to form magnesium oxide.",
+        sign: "Bright light, heat, or formation of a new solid compound.",
+        tip: "Key word: combine. Many metal oxides form this way.",
+        particleNote: "Separate particles move together and become bonded as one product.",
+        reactants: "A metal and oxygen are common reactants, such as Mg and O₂.",
+        products: "One compound is formed, such as MgO.",
+        quiz: "Which pattern best represents a synthesis reaction?",
+        answer: "A + B → AB",
+        options: ["A + B → AB", "AB → A + B", "AB + CD → AD + CB", "Fuel + O₂ → CO₂ + H₂O"],
+        animation: "synthesis"
+      },
+      {
+        id: "decomposition",
+        title: "Decomposition Reaction",
+        pattern: "AB → A + B",
+        equation: "2H₂O₂ → 2H₂O + O₂",
+        description: "One compound breaks down into two or more simpler substances. Heat, electricity, light, or a catalyst may help start the reaction.",
+        identify: "Look for one reactant forming several products. The reactant side is simple, and the product side has more substances.",
+        example: "Hydrogen peroxide decomposes into water and oxygen gas.",
+        sign: "Gas bubbles, color change, or breakdown after heating.",
+        tip: "Key word: break apart. Carbonates often decompose when heated.",
+        particleNote: "A bonded particle separates into smaller particles or molecules.",
+        reactants: "Usually one compound, such as H₂O₂, CaCO₃, or KClO₃.",
+        products: "Two or more simpler substances are produced.",
+        quiz: "A compound breaks into two simpler substances. What type is it?",
+        answer: "Decomposition",
+        options: ["Synthesis", "Decomposition", "Combustion", "Neutralization"],
+        animation: "decomposition"
+      },
+      {
+        id: "single",
+        title: "Single Replacement Reaction",
+        pattern: "A + BC → AC + B",
+        equation: "Zn + CuSO₄ → ZnSO₄ + Cu",
+        description: "One element replaces another element in a compound. The free element must be more reactive than the element it replaces.",
+        identify: "Look for one free element reacting with one compound, then a different free element appears in the products.",
+        example: "Zinc replaces copper in copper sulfate solution.",
+        sign: "Metal coating forms, color changes, or gas may be produced.",
+        tip: "Use the reactivity series to decide if the replacement can happen.",
+        particleNote: "One particle pushes another out of a compound and takes its place.",
+        reactants: "One element plus one compound, such as Zn + CuSO₄.",
+        products: "A new compound plus a released element, such as ZnSO₄ + Cu.",
+        quiz: "Which equation shows single replacement?",
+        answer: "Zn + CuSO₄ → ZnSO₄ + Cu",
+        options: ["2Na + Cl₂ → 2NaCl", "Zn + CuSO₄ → ZnSO₄ + Cu", "AgNO₃ + NaCl → AgCl + NaNO₃", "CH₄ + 2O₂ → CO₂ + 2H₂O"],
+        animation: "single"
+      },
+      {
+        id: "double",
+        title: "Double Replacement Reaction",
+        pattern: "AB + CD → AD + CB",
+        equation: "AgNO₃ + NaCl → AgCl + NaNO₃",
+        description: "Two compounds exchange ions. This often happens in aqueous solutions and may produce a precipitate, gas, or water.",
+        identify: "Look for two compounds on the reactant side and two new compounds on the product side. The positive ions switch partners.",
+        example: "Silver nitrate reacts with sodium chloride to form silver chloride precipitate.",
+        sign: "Formation of a precipitate, gas, or water.",
+        tip: "Key idea: partners switch. Check solubility rules for precipitates.",
+        particleNote: "Ions separate in solution, collide, and recombine with new partners.",
+        reactants: "Two ionic compounds in solution, such as AgNO₃ and NaCl.",
+        products: "Two new compounds, often with an insoluble solid like AgCl.",
+        quiz: "In a double replacement reaction, what usually happens?",
+        answer: "Ions switch partners",
+        options: ["One compound breaks apart", "Ions switch partners", "Fuel reacts with oxygen", "One product only forms"],
+        animation: "double"
+      },
+      {
+        id: "combustion",
+        title: "Combustion Reaction",
+        pattern: "Fuel + O₂ → CO₂ + H₂O + energy",
+        equation: "CH₄ + 2O₂ → CO₂ + 2H₂O",
+        description: "A substance reacts rapidly with oxygen and releases energy as heat and light. Hydrocarbon combustion produces carbon dioxide and water when oxygen is enough.",
+        identify: "Look for oxygen as a reactant and energy release. If the fuel is a hydrocarbon, CO₂ and H₂O are common products.",
+        example: "Methane burns in oxygen to form carbon dioxide and water.",
+        sign: "Flame, heat, light, and sometimes smoke.",
+        tip: "Always check oxygen. Combustion is usually exothermic.",
+        particleNote: "Fuel molecules collide with oxygen, bonds break, and new bonds form in CO₂ and H₂O.",
+        reactants: "A fuel, often a hydrocarbon, plus oxygen gas.",
+        products: "Carbon dioxide, water, and energy when combustion is complete.",
+        quiz: "What reactant is required for combustion?",
+        answer: "Oxygen",
+        options: ["Nitrogen", "Oxygen", "Sodium chloride", "Silver nitrate"],
+        animation: "combustion"
+      },
+      {
+        id: "acidbase",
+        title: "Acid-Base Neutralization",
+        pattern: "Acid + Base → Salt + Water",
+        equation: "HCl + NaOH → NaCl + H₂O",
+        description: "An acid reacts with a base to form salt and water. It is a special type of double replacement reaction.",
+        identify: "Look for an acid and a base as reactants. Water is usually one of the products.",
+        example: "Hydrochloric acid reacts with sodium hydroxide to form sodium chloride and water.",
+        sign: "Temperature change and pH moves toward neutral.",
+        tip: "Acid gives H⁺ and base gives OH⁻. H⁺ + OH⁻ forms H₂O.",
+        particleNote: "Hydrogen ions and hydroxide ions combine to make water molecules.",
+        reactants: "Acid such as HCl and base such as NaOH.",
+        products: "Salt such as NaCl and water.",
+        quiz: "What are the usual products of neutralization?",
+        answer: "Salt and water",
+        options: ["Metal and oxygen", "Salt and water", "Only carbon dioxide", "Only one compound"],
+        animation: "neutral"
+      },
+      {
+        id: "redox",
+        title: "Oxidation-Reduction / Redox Reaction",
+        pattern: "Electrons are transferred",
+        equation: "2Na + Cl₂ → 2NaCl",
+        description: "A redox reaction involves electron transfer. Oxidation means loss of electrons, and reduction means gain of electrons.",
+        identify: "Look for changes in oxidation numbers, reaction with oxygen, or formation of ions from atoms.",
+        example: "Sodium gives electrons to chlorine, forming Na⁺ and Cl⁻ ions.",
+        sign: "Energy release, color change, metal corrosion, or ion formation.",
+        tip: "Remember OIL RIG: Oxidation Is Loss, Reduction Is Gain.",
+        particleNote: "Electrons move from one particle to another, creating new ions or changing oxidation states.",
+        reactants: "A substance that loses electrons and a substance that gains electrons.",
+        products: "New substances with changed oxidation states.",
+        quiz: "In redox, reduction means what?",
+        answer: "Gain of electrons",
+        options: ["Loss of electrons", "Gain of electrons", "Formation of only water", "Breaking one compound only"],
+        animation: "redox"
+      },
+      {
+        id: "precipitation",
+        title: "Precipitation Reaction",
+        pattern: "Aqueous ions → Insoluble solid",
+        equation: "Pb(NO₃)₂ + 2KI → PbI₂ + 2KNO₃",
+        description: "A precipitation reaction forms an insoluble solid from ions in solution. The solid is called a precipitate.",
+        identify: "Look for two aqueous solutions forming a solid product, usually marked with (s).",
+        example: "Lead nitrate and potassium iodide form yellow lead iodide precipitate.",
+        sign: "A cloudy mixture or solid appears suddenly in the solution.",
+        tip: "Use solubility rules to predict whether a precipitate forms.",
+        particleNote: "Free ions in water join to form an insoluble crystal lattice.",
+        reactants: "Two soluble ionic compounds dissolved in water.",
+        products: "One insoluble solid plus remaining ions in solution.",
+        quiz: "What is a precipitate?",
+        answer: "An insoluble solid formed in solution",
+        options: ["A gas only", "An insoluble solid formed in solution", "A type of flame", "A free electron"],
+        animation: "precipitation"
+      }
+    ];
+
+    const stage = document.getElementById("stage");
+    const buttons = document.getElementById("reactionButtons");
+    const speed = document.getElementById("speed");
+    let current = reactions[0];
+    let activeIndex = 0;
+    let currentQuiz = null;
+
+    function makeButtons() {
+      reactions.forEach((reaction, index) => {
+        const btn = document.createElement("button");
+        btn.textContent = reaction.title.split(" /")[0].replace("Oxidation-Reduction", "Redox");
+        btn.addEventListener("click", () => setReaction(index));
+        if (index === 0) btn.classList.add("active");
+        buttons.appendChild(btn);
+      });
+    }
+
+    function setReaction(index) {
+      activeIndex = index;
+      current = reactions[index];
+      [...buttons.children].forEach((button, i) => button.classList.toggle("active", i === index));
+      document.getElementById("title").textContent = current.title;
+      document.getElementById("pattern").textContent = current.pattern;
+      document.getElementById("equation").textContent = current.equation;
+      document.getElementById("description").textContent = current.description;
+      document.getElementById("identify").textContent = current.identify;
+      document.getElementById("example").textContent = current.example;
+      document.getElementById("sign").textContent = current.sign;
+      document.getElementById("tip").textContent = current.tip;
+      document.getElementById("particleNote").textContent = current.particleNote;
+      document.getElementById("reactantsBox").textContent = current.reactants;
+      document.getElementById("productsBox").textContent = current.products;
+      document.getElementById("stageCaption").textContent = `${current.title}: ${current.pattern}`;
+      drawAnimation(current.animation);
+    }
+
+    function setAnimSpeed() {
+      document.documentElement.style.setProperty("--anim-speed", `${speed.value}s`);
+    }
+
+    function molecule(text, cls, style = "", anim = "") {
+      const div = document.createElement("div");
+      div.className = `molecule ${cls}`;
+      div.textContent = text;
+      div.style.cssText = style;
+      if (anim) div.style.animationName = anim;
+      stage.appendChild(div);
+      return div;
+    }
+
+    function bond(style = "", anim = "") {
+      const div = document.createElement("div");
+      div.className = "bond";
+      div.style.cssText = style;
+      if (anim) div.style.animationName = anim;
+      stage.appendChild(div);
+      return div;
+    }
+
+    function arrow() {
+      const div = document.createElement("div");
+      div.className = "arrow";
+      div.textContent = "→";
+      stage.appendChild(div);
+    }
+
+    function addStageZones(note = "Reactants change into products. Atoms are rearranged, not destroyed.") {
+      const line = document.createElement("div");
+      line.className = "reaction-zone-line";
+      stage.appendChild(line);
+
+      const reactants = document.createElement("div");
+      reactants.className = "zone-title reactants-title";
+      reactants.textContent = "REACTANTS";
+      stage.appendChild(reactants);
+
+      const products = document.createElement("div");
+      products.className = "zone-title products-title";
+      products.textContent = "PRODUCTS";
+      stage.appendChild(products);
+
+      const stageNote = document.createElement("div");
+      stageNote.className = "stage-note";
+      stageNote.textContent = note;
+      stage.appendChild(stageNote);
+    }
+
+    function plus(left, top) {
+      const div = document.createElement("div");
+      div.className = "plus-sign";
+      div.style.left = left;
+      div.style.top = top;
+      div.textContent = "+";
+      stage.appendChild(div);
+    }
+
+    function energyLabel(text = "Energy released") {
+      const div = document.createElement("div");
+      div.className = "energy-label";
+      div.textContent = text;
+      stage.appendChild(div);
+    }
+
+    function addHeat() {
+      const heat = document.createElement("div");
+      heat.className = "heat";
+      heat.innerHTML = `<div class="flame"></div><div class="flame"></div><div class="flame"></div>`;
+      stage.appendChild(heat);
+    }
+
+    function addBubbles() {
+      for (let i = 0; i < 10; i++) {
+        const b = document.createElement("div");
+        b.className = "bubble";
+        b.style.left = `${18 + Math.random() * 64}%`;
+        b.style.bottom = `${40 + Math.random() * 80}px`;
+        b.style.animationDelay = `${Math.random() * 2.4}s`;
+        stage.appendChild(b);
+      }
+    }
+
+    function addPrecipitate() {
+      for (let i = 0; i < 18; i++) {
+        const p = document.createElement("div");
+        p.className = "precipitate";
+        p.style.left = `${20 + Math.random() * 60}%`;
+        p.style.top = `${100 + Math.random() * 60}px`;
+        p.style.animationDelay = `${Math.random() * 2.8}s`;
+        stage.appendChild(p);
+      }
+    }
+
+    function addSparks(count = 14) {
+      for (let i = 0; i < count; i++) {
+        const s = document.createElement("div");
+        s.className = "spark";
+        s.style.left = `${47 + Math.random() * 8}%`;
+        s.style.top = `${39 + Math.random() * 12}%`;
+        s.style.setProperty("--sx", `${-90 + Math.random() * 180}px`);
+        s.style.setProperty("--sy", `${-80 + Math.random() * 140}px`);
+        s.style.animationDelay = `${Math.random() * 1.5}s`;
+        stage.appendChild(s);
+      }
+    }
+
+    function addStarburst() {
+      const burst = document.createElement("div");
+      burst.className = "starburst";
+      stage.appendChild(burst);
+    }
+
+    function celebrate() {
+      const colors = ["#67e8f9", "#86efac", "#fcd34d", "#fda4af", "#c4b5fd", "#fdba74"];
+      for (let i = 0; i < 28; i++) {
+        const piece = document.createElement("div");
+        piece.className = "confetti";
+        piece.style.left = `${Math.random() * 100}%`;
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDelay = `${Math.random() * 0.25}s`;
+        piece.style.transform = `rotate(${Math.random() * 180}deg)`;
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 1800);
+      }
+    }
+
+    function clearStage() {
+      [...stage.children].forEach(child => {
+        if (!child.classList.contains("stage-label")) child.remove();
+      });
+    }
+
+    function drawAnimation(type) {
+      clearStage();
+      addStageZones(type === "combustion" ? "Combustion: Fuel + oxygen are reactants. Carbon dioxide + water are products. Heat/light are released." : undefined);
+      arrow();
+      addStarburst();
+      addSparks(type === "combustion" ? 24 : 12);
+
+      if (type === "synthesis") {
+        plus("23%", "46%");
+        molecule("A", "a", "left:12%; top:42%;", "reactantToCenterLeft");
+        molecule("B", "b", "left:31%; top:42%;", "reactantToCenterRight");
+        molecule("AB", "c", "left:68%; top:42%;", "productAppearMain");
+      }
+
+      if (type === "decomposition") {
+        addHeat();
+        molecule("AB", "c", "left:22%; top:42%;", "compoundBreakStart");
+        molecule("A", "a", "left:66%; top:29%;", "productAppearUpper");
+        plus("77%", "45%");
+        molecule("B", "b", "left:66%; top:57%;", "productAppearLower");
+        addBubbles();
+      }
+
+      if (type === "single") {
+        plus("22%", "46%");
+        molecule("A", "a", "left:10%; top:44%;", "singleFreeElement");
+        molecule("BC", "b", "left:30%; top:44%;", "singleCompound");
+        molecule("AC", "c", "left:64%; top:30%;", "productAppearUpperFar");
+        plus("74%", "45%");
+        molecule("B", "d", "left:76%; top:54%;", "productAppearLowerFar");
+      }
+
+      if (type === "double") {
+        plus("22%", "46%");
+        molecule("AB", "a", "left:11%; top:35%;", "doubleReactantOne");
+        molecule("CD", "b", "left:31%; top:55%;", "doubleReactantTwo");
+        molecule("AD", "c", "left:64%; top:30%;", "productAppearUpperFar");
+        plus("74%", "45%");
+        molecule("CB", "d", "left:76%; top:54%;", "productAppearLowerFar");
+        addBubbles();
+      }
+
+      if (type === "combustion") {
+        addHeat();
+        plus("24%", "46%");
+        molecule("CH₄\nFuel", "f", "left:12%; top:39%; white-space:pre-line;", "combustionReactantLeft");
+        molecule("2O₂", "a", "left:31%; top:50%;", "combustionReactantRight");
+        molecule("CO₂", "c", "left:66%; top:29%;", "combustionProductCO2");
+        plus("78%", "45%");
+        molecule("2H₂O", "e", "left:66%; top:57%;", "combustionProductH2O");
+        const flash = molecule("🔥", "d", "left:47%; top:42%; font-size:32px; background:rgba(251,146,60,0.9);", "reactionFlash");
+        flash.setAttribute("aria-label", "reaction releases heat and light");
+        energyLabel("heat + light released");
+      }
+
+      if (type === "neutral") {
+        plus("22%", "46%");
+        molecule("H⁺", "d", "left:12%; top:36%;", "neutralAcid");
+        molecule("OH⁻", "a", "left:31%; top:54%;", "neutralBase");
+        molecule("H₂O", "c", "left:64%; top:30%;", "productAppearUpperFar");
+        plus("74%", "45%");
+        molecule("Salt", "e", "left:76%; top:54%;", "productAppearLowerFar");
+        addBubbles();
+      }
+
+      if (type === "redox") {
+        plus("23%", "46%");
+        molecule("Na", "f", "left:12%; top:42%;", "reactantToCenterLeft");
+        molecule("Cl₂", "a", "left:31%; top:42%;", "reactantToCenterRight");
+        molecule("e⁻", "e", "left:25%; top:27%; width:48px; height:48px;", "electronMove");
+        molecule("NaCl", "c", "left:68%; top:42%;", "productAppearMain");
+      }
+
+      if (type === "precipitation") {
+        plus("22%", "46%");
+        molecule("Pb²⁺", "a", "left:12%; top:36%;", "neutralAcid");
+        molecule("2I⁻", "b", "left:31%; top:54%;", "neutralBase");
+        molecule("PbI₂(s)", "f", "left:67%; top:42%;", "productAppearMain");
+        addPrecipitate();
+      }
+    }
+
+    function getMixedQuizQuestion() {
+      const pool = [
+        {
+          question: "A reaction has this pattern: A + B → AB. What type is it?",
+          answer: "Synthesis",
+          options: ["Synthesis", "Decomposition", "Double replacement", "Precipitation"]
+        },
+        {
+          question: "A compound breaks into simpler substances. What type of reaction is this?",
+          answer: "Decomposition",
+          options: ["Combustion", "Decomposition", "Neutralization", "Single replacement"]
+        },
+        {
+          question: "Zn + CuSO₄ → ZnSO₄ + Cu is an example of which reaction type?",
+          answer: "Single replacement",
+          options: ["Synthesis", "Single replacement", "Combustion", "Acid-base neutralization"]
+        },
+        {
+          question: "Two compounds exchange ions and form two new compounds. What type is it?",
+          answer: "Double replacement",
+          options: ["Double replacement", "Redox", "Synthesis", "Decomposition"]
+        },
+        {
+          question: "A fuel reacts with oxygen and releases heat and light. What type is it?",
+          answer: "Combustion",
+          options: ["Combustion", "Precipitation", "Neutralization", "Single replacement"]
+        },
+        {
+          question: "Acid + base → salt + water. What type of reaction is this?",
+          answer: "Acid-base neutralization",
+          options: ["Redox", "Acid-base neutralization", "Synthesis", "Precipitation"]
+        },
+        {
+          question: "A reaction involves electron transfer. What type is it?",
+          answer: "Redox",
+          options: ["Decomposition", "Combustion", "Redox", "Double replacement"]
+        },
+        {
+          question: "A cloudy solid forms when two clear solutions are mixed. What type is it?",
+          answer: "Precipitation",
+          options: ["Precipitation", "Combustion", "Synthesis", "Neutralization"]
+        }
+      ];
+
+      let next = pool[Math.floor(Math.random() * pool.length)];
+      if (currentQuiz && pool.length > 1) {
+        while (next.question === currentQuiz.question) {
+          next = pool[Math.floor(Math.random() * pool.length)];
+        }
+      }
+      return next;
+    }
+
+    function shuffleArray(items) {
+      const array = [...items];
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function buildQuiz() {
+      currentQuiz = getMixedQuizQuestion();
+      const q = document.getElementById("quizQuestion");
+      const options = document.getElementById("quizOptions");
+      const feedback = document.getElementById("quizFeedback");
+      q.textContent = currentQuiz.question;
+      options.innerHTML = "";
+      feedback.textContent = "";
+      feedback.className = "feedback";
+
+      shuffleArray(currentQuiz.options).forEach((option, index) => {
+        const btn = document.createElement("button");
+        btn.className = "option";
+        btn.textContent = `${String.fromCharCode(65 + index)}. ${option}`;
+        btn.addEventListener("click", () => {
+          const ok = option === currentQuiz.answer;
+          feedback.textContent = ok ? "Correct! Great job." : "Not quite. Try to identify the pattern first, then choose New Question to practice again.";
+          feedback.className = ok ? "feedback correct" : "feedback wrong";
+          btn.classList.add(ok ? "pop-correct" : "shake-wrong");
+          if (ok) celebrate();
+          [...options.children].forEach(child => child.disabled = true);
+        });
+        options.appendChild(btn);
+      });
+    }
+
+    document.getElementById("newQuestionBtn").addEventListener("click", buildQuiz);
+
+    document.getElementById("replayBtn").addEventListener("click", () => drawAnimation(current.animation));
+
+    document.getElementById("particlesBtn").addEventListener("click", () => {
+      alert(current.particleNote + "\n\nRemember: atoms are rearranged during a chemical reaction, but they are not created or destroyed.");
+    });
+
+    speed.addEventListener("input", () => {
+      setAnimSpeed();
+      drawAnimation(current.animation);
+    });
+
+    makeButtons();
+    setAnimSpeed();
+    setReaction(0);
+  </script>
+</body>
+</html>
